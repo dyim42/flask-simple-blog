@@ -6,5 +6,5 @@ simple Flask + mongoengine blog app (based on Flask tutorial)
 Just a test.
 
 TODO:
-- validation
+- better validation
 - more and more

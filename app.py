@@ -6,6 +6,8 @@ from flask.views import MethodView
 from flask.ext.mongoengine import MongoEngine
 import datetime
 
+from wtforms import Form, TextField, validators
+
 # simple auth
 USERNAME = 'admin'
 PASSWORD = 'default'
@@ -18,7 +20,7 @@ app.config.from_object(__name__)
 db = MongoEngine(app)
 
 
-
+## MONGO
 class Post(db.Document):
     created_at = db.DateTimeField(default=datetime.datetime.now, required=True)
     title = db.StringField(max_length=120, required=True)
@@ -29,6 +31,11 @@ class Post(db.Document):
         'indexes': ['-created_at', 'title'],
         'ordering': ['-created_at']
     }
+
+## Post Form
+class PostForm(Form):
+    title = TextField('Title', [validators.Length(min=3, max=120)])
+    text = TextField('Text', [validators.Length(min=5, max=500)])
 
 
 
@@ -52,19 +59,22 @@ class ListView(MethodView):
         return render_template('show_entries.html', entries=entries)
 
 
-# Todo: validation
+# Todo: better validation
 class AddPost(MethodView):
     def post(self):
-        if request.method == 'POST':
+        form = PostForm(request.form)
+        if request.method == 'POST' and form.validate():
             post = Post(
-                title=request.form['title'],
-                text=request.form['text']
+                title=form.title.data,
+                text=form.text.data
             )
             post.save()
+            flash('New entry was successfully posted')
         else:
-            flash('Error!')
-        flash('New entry was successfully posted')
+            flash('Error: wrong number of words either in title or text field','error')
+
         return redirect(url_for('list'))
+
 
     def get(self):
         """
@@ -86,7 +96,7 @@ class Login(MethodView):
             error = 'Invalid password'
         else:
             session['logged_in'] = True
-            flash('You were logged in')
+            flash('Logged in')
             return redirect(url_for('list'))
         return render_template('login.html', error=error)
 
@@ -122,4 +132,4 @@ app.add_url_rule('/add', view_func=AddPost.as_view('add_entry'))
 
 
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
